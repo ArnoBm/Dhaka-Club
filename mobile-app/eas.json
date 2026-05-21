@@ -9,7 +9,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://YOUR_BACKEND_URL/api"
+        "EXPO_PUBLIC_API_URL": "https://dhaka-club-api.onrender.com/api"
       }
     },
     "production": {
@@ -17,7 +17,7 @@
         "buildType": "app-bundle"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://YOUR_BACKEND_URL/api"
+        "EXPO_PUBLIC_API_URL": "https://dhaka-club-api.onrender.com/api"
       }
     }
   }
