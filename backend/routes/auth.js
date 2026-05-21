@@ -8,6 +8,7 @@ const { QueryTypes } = require('sequelize');
 const sequelize = require('../config/db');
 const auth = require('../middleware/auth');
 const { storeUploadedFile } = require('../utils/fileStorage');
+const { isExpoPushToken } = require('../utils/pushNotifications');
 
 const router = express.Router();
 const profilePhotoDir = path.join(__dirname, '..', 'uploads', 'profile-photos');
@@ -387,6 +388,64 @@ router.post('/member-change-password', auth, async (req, res) => {
     }
 });
 
+router.post('/member-push-token', auth, async (req, res) => {
+    const memberId = req.admin && req.admin.id;
+    const tokenType = req.admin && req.admin.type;
+    const { expo_push_token } = req.body;
+
+    if (tokenType !== 'member' || !memberId) {
+        return res.status(403).json({ message: 'Only members can register push tokens.' });
+    }
+
+    if (!isExpoPushToken(expo_push_token)) {
+        return res.status(400).json({ message: 'A valid Expo push token is required.' });
+    }
+
+    try {
+        await ensureMemberPushTokenColumn();
+
+        await sequelize.query(
+            'UPDATE members SET expo_push_token = :expo_push_token WHERE id = :id',
+            {
+                replacements: {
+                    expo_push_token,
+                    id: memberId,
+                },
+                type: QueryTypes.UPDATE,
+            }
+        );
+
+        return res.json({ message: 'Push token saved successfully.' });
+    } catch (error) {
+        return res.status(500).json({ message: 'Failed to save push token.', error: error.message });
+    }
+});
+
+router.delete('/member-push-token', auth, async (req, res) => {
+    const memberId = req.admin && req.admin.id;
+    const tokenType = req.admin && req.admin.type;
+
+    if (tokenType !== 'member' || !memberId) {
+        return res.status(403).json({ message: 'Only members can remove push tokens.' });
+    }
+
+    try {
+        await ensureMemberPushTokenColumn();
+
+        await sequelize.query(
+            'UPDATE members SET expo_push_token = NULL WHERE id = :id',
+            {
+                replacements: { id: memberId },
+                type: QueryTypes.UPDATE,
+            }
+        );
+
+        return res.json({ message: 'Push token removed successfully.' });
+    } catch (error) {
+        return res.status(500).json({ message: 'Failed to remove push token.', error: error.message });
+    }
+});
+
 router.post('/change-password', auth, async (req, res) => {
     const { currentPassword, newPassword } = req.body;
     const adminId = req.admin && req.admin.id;
@@ -481,6 +540,26 @@ async function ensureMemberProfileColumns() {
             'ALTER TABLE members ADD COLUMN secondary_number VARCHAR(30) NULL AFTER phone'
         );
     }
+}
+
+async function ensureMemberPushTokenColumn() {
+    const columns = await sequelize.query(
+        `SELECT COLUMN_NAME
+         FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE()
+            AND TABLE_NAME = 'members'
+            AND COLUMN_NAME = 'expo_push_token'
+         LIMIT 1`,
+        { type: QueryTypes.SELECT }
+    );
+
+    if (columns.length) {
+        return;
+    }
+
+    await sequelize.query(
+        'ALTER TABLE members ADD COLUMN expo_push_token VARCHAR(255) NULL AFTER password'
+    );
 }
 
 module.exports = router;

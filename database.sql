@@ -38,6 +38,7 @@ CREATE TABLE members (
     address VARCHAR(255) NULL,
     profile_photo VARCHAR(255) NULL,
     password VARCHAR(255) NULL,
+    expo_push_token VARCHAR(255) NULL,
     member_type ENUM('Life Member', 'General Member', 'Honorary Member', 'Special Member', 'Officers of Defense Forces') NOT NULL DEFAULT 'General Member',
     membership_group VARCHAR(100) NULL,
     membership_expiry DATE NULL,

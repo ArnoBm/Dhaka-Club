@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import api from '../api/axios';
 import { disconnectMemberSocket } from '../api/socket';
+import { registerForPushNotifications, unregisterPushNotifications } from '../utils/notifications';
 
 const AuthContext = createContext(null);
 
@@ -19,6 +20,7 @@ export function AuthProvider({ children }) {
         if (storedToken && storedMember) {
           setToken(storedToken);
           setMember(JSON.parse(storedMember));
+          registerForPushNotifications().catch(() => {});
         }
       } catch (error) {
         await AsyncStorage.multiRemove(['memberToken', 'memberInfo']);
@@ -39,11 +41,13 @@ export function AuthProvider({ children }) {
 
     setToken(memberToken);
     setMember(memberInfo);
+    registerForPushNotifications().catch(() => {});
 
     return memberInfo;
   };
 
   const logout = async () => {
+    await unregisterPushNotifications();
     disconnectMemberSocket();
     await AsyncStorage.clear();
     setToken(null);

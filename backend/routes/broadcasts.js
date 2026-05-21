@@ -7,6 +7,7 @@ const sequelize = require('../config/db');
 const auth = require('../middleware/auth');
 const { emitToAdmins, emitToMember } = require('../utils/realtime');
 const { storeUploadedFile } = require('../utils/fileStorage');
+const { sendExpoPushNotifications } = require('../utils/pushNotifications');
 
 const router = express.Router();
 const attachmentDir = path.join(__dirname, '..', 'uploads', 'broadcast-attachments');
@@ -106,6 +107,8 @@ router.post('/', attachmentUpload.single('attachment'), async (req, res) => {
 
         const broadcastId = result[0];
 
+        const pushMessages = [];
+
         for (const recipient of recipients) {
             const notificationResult = await sequelize.query(
                 `INSERT INTO notifications (member_id, title, body, type, attachment_url)
@@ -130,11 +133,29 @@ router.post('/', attachmentUpload.single('attachment'), async (req, res) => {
                 notification_id: notificationId,
                 broadcast_id: broadcastId,
             });
+
+            if (recipient.expo_push_token) {
+                pushMessages.push({
+                    to: recipient.expo_push_token,
+                    title,
+                    body,
+                    sound: 'default',
+                    data: {
+                        type: 'broadcast',
+                        notification_id: notificationId,
+                        broadcast_id: broadcastId,
+                    },
+                });
+            }
         }
+
+        sendExpoPushNotifications(pushMessages).catch((pushError) => {
+            console.error('Failed to send push notifications:', pushError.message);
+        });
 
         emitToAdmins('broadcasts:changed', { broadcast_id: broadcastId });
 
-        return res.status(201).json({ message: 'Broadcast sent.', broadcast_id: broadcastId, recipients: recipients.length });
+        return res.status(201).json({ message: 'Broadcast sent.', broadcast_id: broadcastId, recipients: recipients.length, push_recipients: pushMessages.length });
     } catch (error) {
         return res.status(500).json({ message: 'Failed to send broadcast.', error: error.message });
     }
@@ -162,20 +183,20 @@ router.get('/:id/deliveries', async (req, res) => {
 async function findRecipients(targetType, targetValue) {
     if (targetType === 'Specific Member') {
         return sequelize.query(
-            'SELECT id FROM members WHERE id = :id AND status = "Active"',
+            'SELECT id, expo_push_token FROM members WHERE id = :id AND status = "Active"',
             { replacements: { id: targetValue }, type: QueryTypes.SELECT }
         );
     }
 
     if (targetType === 'Membership Group') {
         return sequelize.query(
-            'SELECT id FROM members WHERE membership_group = :group AND status = "Active"',
+            'SELECT id, expo_push_token FROM members WHERE membership_group = :group AND status = "Active"',
             { replacements: { group: targetValue }, type: QueryTypes.SELECT }
         );
     }
 
     return sequelize.query(
-        'SELECT id FROM members WHERE status = "Active"',
+        'SELECT id, expo_push_token FROM members WHERE status = "Active"',
         { type: QueryTypes.SELECT }
     );
 }
@@ -242,6 +263,7 @@ function ensureTables() {
             addDeliveryColumn('notification_id', 'BIGINT UNSIGNED NULL AFTER broadcast_id'),
             addBroadcastColumn('attachment_url', 'VARCHAR(255) NULL AFTER target_value'),
             addNotificationColumn('attachment_url', 'VARCHAR(255) NULL AFTER related_id'),
+            addMemberColumn('expo_push_token', 'VARCHAR(255) NULL AFTER password'),
             addDeliveryIndex(),
         ]).catch((error) => {
             setupPromise = null;
@@ -250,6 +272,18 @@ function ensureTables() {
     }
 
     return setupPromise;
+}
+
+async function addMemberColumn(columnName, definition) {
+    try {
+        await sequelize.query(`ALTER TABLE members ADD COLUMN ${columnName} ${definition}`);
+    } catch (error) {
+        if (error.parent && error.parent.code === 'ER_DUP_FIELDNAME') {
+            return;
+        }
+
+        throw error;
+    }
 }
 
 async function addDeliveryColumn(columnName, definition) {
