@@ -23,6 +23,14 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       }
     },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/bfd942a7-66f0-4545-b3bf-a8fa8252e220",
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0
+    },
     "extra": {
       "apiUrl": "",
       "eas": {
