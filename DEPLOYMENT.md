@@ -51,6 +51,10 @@ DB_NAME=dhaka_club
 DB_SSL=true
 JWT_SECRET=use-a-long-random-secret
 CORS_ORIGIN=https://your-admin-vercel-url.vercel.app
+PUBLIC_API_BASE_URL=https://your-render-backend-url.onrender.com
+CLOUDINARY_CLOUD_NAME=your-cloudinary-cloud-name
+CLOUDINARY_API_KEY=your-cloudinary-api-key
+CLOUDINARY_API_SECRET=your-cloudinary-api-secret
 ```
 
 After deploy, backend URL will look like:
@@ -120,11 +124,11 @@ eas build --platform android --profile preview
 
 Expo will provide an install link. Send that link to the client/testers.
 
-## 5. Current Limitation
+## 5. Persistent Uploads
 
-Profile image uploads are stored in the backend server's local `uploads` folder. This is acceptable for a temporary demo, but not ideal for production because free hosting files may reset after redeploys/restarts.
+Set the Cloudinary variables in Render before uploading event covers, notice attachments, broadcast attachments, or profile photos. When these values are present, uploaded files are stored on Cloudinary and the database saves the permanent Cloudinary URL.
 
-For production, move uploads to Cloudinary, S3, or another object storage service.
+If the Cloudinary variables are missing, the backend falls back to the local `uploads` folder. That is acceptable only for local development because free hosting files may reset after redeploys/restarts.
 
 ## 6. Demo Links to Send Client
 

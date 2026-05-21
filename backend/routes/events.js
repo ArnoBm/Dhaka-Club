@@ -6,6 +6,7 @@ const { QueryTypes } = require('sequelize');
 const sequelize = require('../config/db');
 const auth = require('../middleware/auth');
 const writeAuditLog = require('../utils/auditLog');
+const { storeUploadedFile } = require('../utils/fileStorage');
 
 const router = express.Router();
 const coverDir = path.join(__dirname, '..', 'uploads', 'event-covers');
@@ -605,7 +606,11 @@ router.get('/:id', async (req, res) => {
 router.post('/', coverUpload.single('cover_image_file'), async (req, res) => {
     const data = pickFields(req.body, eventFields);
     if (req.file) {
-        data.cover_image = `/uploads/event-covers/${req.file.filename}`;
+        data.cover_image = await storeUploadedFile(req.file, {
+            folder: 'dhaka-club/event-covers',
+            fallbackPath: `/uploads/event-covers/${req.file.filename}`,
+            resourceType: 'image',
+        });
     }
     normalizeEventData(data);
 
@@ -667,7 +672,11 @@ router.post('/', coverUpload.single('cover_image_file'), async (req, res) => {
 router.put('/:id', coverUpload.single('cover_image_file'), async (req, res) => {
     const data = pickFields(req.body, eventFields);
     if (req.file) {
-        data.cover_image = `/uploads/event-covers/${req.file.filename}`;
+        data.cover_image = await storeUploadedFile(req.file, {
+            folder: 'dhaka-club/event-covers',
+            fallbackPath: `/uploads/event-covers/${req.file.filename}`,
+            resourceType: 'image',
+        });
     }
     normalizeEventData(data);
 

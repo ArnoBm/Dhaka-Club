@@ -6,6 +6,7 @@ const { QueryTypes } = require('sequelize');
 const sequelize = require('../config/db');
 const auth = require('../middleware/auth');
 const { emitToAdmins, emitToMember } = require('../utils/realtime');
+const { storeUploadedFile } = require('../utils/fileStorage');
 
 const router = express.Router();
 const attachmentDir = path.join(__dirname, '..', 'uploads', 'broadcast-attachments');
@@ -67,7 +68,12 @@ router.get('/', async (req, res) => {
 
 router.post('/', attachmentUpload.single('attachment'), async (req, res) => {
     const { title, body, type, channel, target_type, target_value } = req.body;
-    const attachmentUrl = req.file ? `/uploads/broadcast-attachments/${req.file.filename}` : null;
+    const attachmentUrl = req.file
+        ? await storeUploadedFile(req.file, {
+            folder: 'dhaka-club/broadcast-attachments',
+            fallbackPath: `/uploads/broadcast-attachments/${req.file.filename}`,
+        })
+        : null;
 
     if (!title || !body || !type || !channel || !target_type) {
         return res.status(400).json({ message: 'Title, body, type, channel, and target are required.' });

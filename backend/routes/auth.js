@@ -7,6 +7,7 @@ const fs = require('fs');
 const { QueryTypes } = require('sequelize');
 const sequelize = require('../config/db');
 const auth = require('../middleware/auth');
+const { storeUploadedFile } = require('../utils/fileStorage');
 
 const router = express.Router();
 const profilePhotoDir = path.join(__dirname, '..', 'uploads', 'profile-photos');
@@ -279,7 +280,11 @@ router.put('/member-profile', auth, profilePhotoUpload.single('profile_photo'), 
         }, {});
 
         if (req.file) {
-            data.profile_photo = `/uploads/profile-photos/${req.file.filename}`;
+            data.profile_photo = await storeUploadedFile(req.file, {
+                folder: 'dhaka-club/profile-photos',
+                fallbackPath: `/uploads/profile-photos/${req.file.filename}`,
+                resourceType: 'image',
+            });
         }
 
         const fields = Object.keys(data);

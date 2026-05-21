@@ -6,6 +6,7 @@ const { QueryTypes } = require('sequelize');
 const sequelize = require('../config/db');
 const auth = require('../middleware/auth');
 const writeAuditLog = require('../utils/auditLog');
+const { storeUploadedFile } = require('../utils/fileStorage');
 
 const router = express.Router();
 const attachmentDir = path.join(__dirname, '..', 'uploads', 'notice-attachments');
@@ -62,7 +63,12 @@ router.get('/', async (req, res) => {
 router.post('/', attachmentUpload.single('attachment'), async (req, res) => {
     const { title, body, target_group } = req.body;
     const createdBy = req.admin && req.admin.id;
-    const attachmentUrl = req.file ? `/uploads/notice-attachments/${req.file.filename}` : null;
+    const attachmentUrl = req.file
+        ? await storeUploadedFile(req.file, {
+            folder: 'dhaka-club/notice-attachments',
+            fallbackPath: `/uploads/notice-attachments/${req.file.filename}`,
+        })
+        : null;
 
     if (!title || !body) {
         return res.status(400).json({ message: 'Title and body are required.' });
