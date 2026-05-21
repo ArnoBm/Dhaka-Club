@@ -128,6 +128,18 @@ router.post('/', async (req, res) => {
         await ensureMemberTypeEnum();
         await ensureMemberPasswordColumn();
 
+        const existingMembers = await sequelize.query(
+            'SELECT id FROM members WHERE phone = :phone LIMIT 1',
+            {
+                replacements: { phone: data.phone },
+                type: QueryTypes.SELECT,
+            }
+        );
+
+        if (existingMembers[0]) {
+            return res.status(409).json({ message: 'Phone number already belongs to another member.' });
+        }
+
         data.password = await bcrypt.hash('123456', 10);
 
         const columns = Object.keys(data);
@@ -153,7 +165,7 @@ router.post('/', async (req, res) => {
         return res.status(201).json(members[0]);
     } catch (error) {
         if (error.parent && error.parent.code === 'ER_DUP_ENTRY') {
-            return res.status(409).json({ message: 'Member ID or email already exists.' });
+            return res.status(409).json({ message: 'Member ID, email, or phone already exists.' });
         }
 
         return res.status(500).json({ message: 'Failed to create member.', error: error.message });
@@ -163,6 +175,7 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
     const data = pickFields(req.body, [...memberFields, 'status']);
     normalizeMemberPayload(data);
+    delete data.phone;
     const fields = Object.keys(data);
 
     if (!fields.length) {

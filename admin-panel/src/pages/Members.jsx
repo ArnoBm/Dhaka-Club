@@ -354,7 +354,7 @@ function MemberModal({ form, setForm, mode, readOnly, saving, onClose, onSubmit 
               label="Phone"
               value={form.phone}
               onChange={(value) => updateField('phone', value)}
-              readOnly={readOnly}
+              readOnly={readOnly || mode === 'edit'}
               required
             />
             <SelectField
