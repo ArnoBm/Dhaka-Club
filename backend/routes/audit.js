@@ -94,7 +94,7 @@ function ensureTables() {
                 KEY idx_audit_logs_module (module),
                 KEY idx_audit_logs_admin (admin_id),
                 KEY idx_audit_logs_created_at (created_at)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci`
         ).catch((error) => {
             setupPromise = null;
             throw error;

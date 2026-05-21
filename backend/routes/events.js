@@ -827,10 +827,10 @@ async function ensureEventTables() {
             sort_order INT UNSIGNED NOT NULL DEFAULT 0,
             is_active BOOLEAN NOT NULL DEFAULT TRUE,
             created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            updated_at DATETIME NULL,
             PRIMARY KEY (id),
             KEY idx_event_ticket_variants_event_id (event_id)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci`
     );
     await sequelize.query(
         `CREATE TABLE IF NOT EXISTS event_registration_items (
@@ -846,7 +846,7 @@ async function ensureEventTables() {
             PRIMARY KEY (id),
             KEY idx_event_registration_items_registration_id (registration_id),
             KEY idx_event_registration_items_variant_id (ticket_variant_id)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci`
     );
 }
 

@@ -203,7 +203,7 @@ function ensureTables() {
                     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     PRIMARY KEY (id),
                     KEY idx_notification_broadcasts_created_at (created_at)
-                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci`
             ),
             sequelize.query(
                 `CREATE TABLE IF NOT EXISTS notification_deliveries (
@@ -219,7 +219,7 @@ function ensureTables() {
                     KEY idx_notification_deliveries_broadcast (broadcast_id),
                     KEY idx_notification_deliveries_notification (notification_id),
                     KEY idx_notification_deliveries_status (status)
-                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci`
             ),
             sequelize.query(
                 `CREATE TABLE IF NOT EXISTS notification_targets (
@@ -231,7 +231,7 @@ function ensureTables() {
                     PRIMARY KEY (id),
                     KEY idx_notification_targets_notification (notification_id),
                     KEY idx_notification_targets_target (target_type, target_value)
-                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci`
             ),
             addDeliveryColumn('notification_id', 'BIGINT UNSIGNED NULL AFTER broadcast_id'),
             addBroadcastColumn('attachment_url', 'VARCHAR(255) NULL AFTER target_value'),

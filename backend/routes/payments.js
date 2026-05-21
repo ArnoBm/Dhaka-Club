@@ -131,7 +131,7 @@ function ensureTables() {
                 UNIQUE KEY uq_payments_invoice_no (invoice_no),
                 KEY idx_payments_status (status),
                 KEY idx_payments_provider (provider)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci`
         ).catch((error) => {
             setupPromise = null;
             throw error;

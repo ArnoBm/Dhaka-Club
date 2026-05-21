@@ -145,7 +145,7 @@ function ensureTables() {
                 UNIQUE KEY uq_guest_requests_qr_code (qr_code),
                 KEY idx_guest_requests_status (status),
                 KEY idx_guest_requests_visit_date (visit_date)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci`
         ).catch((error) => {
             setupPromise = null;
             throw error;

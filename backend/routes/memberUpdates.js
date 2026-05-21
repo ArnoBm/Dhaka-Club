@@ -382,12 +382,12 @@ async function migrateUpdateTables() {
             is_saved BOOLEAN NOT NULL DEFAULT FALSE,
             is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
             created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            updated_at DATETIME NULL,
             PRIMARY KEY (id),
             UNIQUE KEY uq_notification_reads_member_notification (member_id, notification_id),
             KEY idx_notification_reads_member_read (member_id, is_read),
             KEY idx_notification_reads_deleted (is_deleted)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci`
     );
 
     await sequelize.query(
@@ -400,7 +400,7 @@ async function migrateUpdateTables() {
             PRIMARY KEY (id),
             KEY idx_notification_targets_notification (notification_id),
             KEY idx_notification_targets_target (target_type, target_value)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci`
     );
 
     await sequelize.query(
@@ -417,7 +417,7 @@ async function migrateUpdateTables() {
             created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (id),
             KEY idx_notification_broadcasts_created_at (created_at)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci`
     );
 
     await sequelize.query(
@@ -434,7 +434,7 @@ async function migrateUpdateTables() {
             KEY idx_notification_deliveries_broadcast (broadcast_id),
             KEY idx_notification_deliveries_notification (notification_id),
             KEY idx_notification_deliveries_status (status)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci`
     );
 
     await ensureDeliveryLinkColumn();
