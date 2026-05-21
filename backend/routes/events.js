@@ -1052,7 +1052,7 @@ function buildPurchaseSummary({ event, variants, requestedItems, ticketCount }) 
         }
 
         const unitPrice = Number(variant.price || 0);
-        const seatCount = Number(variant.seat_count || 0);
+        const seatCount = getVariantSeatCount(variant);
 
         return {
             ticket_variant_id: variant.id,
@@ -1066,7 +1066,7 @@ function buildPurchaseSummary({ event, variants, requestedItems, ticketCount }) 
     const seatCount = items.reduce((sum, item) => sum + (item.seat_count_snapshot * item.quantity), 0);
     const entryItemCount = items.filter((item) => item.seat_count_snapshot > 0).length;
 
-    if (variants.some((variant) => Number(variant.seat_count || 0) > 0) && seatCount < 1) {
+    if (variants.some(isEntryVariant) && seatCount < 1) {
         const error = new Error('Select at least one entry ticket.');
         error.statusCode = 400;
         throw error;
@@ -1089,11 +1089,26 @@ function formatVariant(variant) {
     return {
         ...variant,
         price: Number(variant.price || 0),
-        seat_count: Number(variant.seat_count || 0),
+        seat_count: getVariantSeatCount(variant),
         max_quantity_per_order: variant.max_quantity_per_order ? Number(variant.max_quantity_per_order) : null,
         sort_order: Number(variant.sort_order || 0),
         is_active: Boolean(variant.is_active),
     };
+}
+
+function isEntryVariant(variant) {
+    return getVariantSeatCount(variant) > 0;
+}
+
+function getVariantSeatCount(variant) {
+    const name = String(variant?.name || '').toLowerCase();
+    const isAddOn = name.includes('driver') || name.includes('add-on') || name.includes('addon');
+
+    if (isAddOn) {
+        return 0;
+    }
+
+    return Number(variant?.seat_count || 0);
 }
 
 async function ensureEventRegistrationPassColumns() {

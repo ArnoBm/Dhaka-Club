@@ -74,7 +74,7 @@ function EventsScreen() {
   const openPurchase = (event) => {
     const availableSeats = Number(event.available_seats || 0);
     const hasVariants = getActiveVariants(event).length > 0;
-    const hasSeatVariant = getActiveVariants(event).some((variant) => Number(variant.seat_count || 0) > 0);
+    const hasSeatVariant = getActiveVariants(event).some(isEntryVariant);
 
     if (event.status !== 'Ongoing') {
       Alert.alert('Not Open Yet', 'Ticket purchase is only available for ongoing events.');
@@ -113,12 +113,12 @@ function EventsScreen() {
       return;
     }
 
-    if (variants.some((variant) => Number(variant.seat_count || 0) > 0) && purchase.seatCount < 1) {
+    if (variants.some(isEntryVariant) && purchase.seatCount < 1) {
       Alert.alert('Select Entry', 'Please select at least one entry ticket.');
       return;
     }
 
-    if (purchase.items.filter((item) => Number(item.seat_count || 0) > 0).length > 1) {
+    if (purchase.items.filter(isEntryVariant).length > 1) {
       Alert.alert('Select One Entry', 'Please select either single or couple entry, not both.');
       return;
     }
@@ -235,7 +235,7 @@ function EventsScreen() {
                 hasPaidTickets(event) || Number(event.requires_ticket || 0) === 1;
               const activeVariants = getActiveVariants(event);
               const hasVariants = activeVariants.length > 0;
-              const hasSeatVariant = activeVariants.some((variant) => Number(variant.seat_count || 0) > 0);
+              const hasSeatVariant = activeVariants.some(isEntryVariant);
               const canRegister =
                 event.status === 'Ongoing' && (availableSeats > 0 || (hasVariants && !hasSeatVariant));
 
@@ -366,14 +366,14 @@ function PurchaseModal({
     const currentValue = Number(variantQuantities[variantId] || 0);
     const nextValue = currentValue > 0 ? '' : '1';
     const selectedVariant = variants.find((variant) => Number(variant.id) === Number(variantId));
-    const isEntryVariant = Number(selectedVariant?.seat_count || 0) > 0;
+    const isEntryTicket = isEntryVariant(selectedVariant);
 
     setVariantQuantities((current) => {
       const next = { ...current, [variantId]: nextValue };
 
-      if (isEntryVariant && Number(nextValue || 0) > 0) {
+      if (isEntryTicket && Number(nextValue || 0) > 0) {
         variants.forEach((variant) => {
-          if (Number(variant.id) !== Number(variantId) && Number(variant.seat_count || 0) > 0) {
+          if (Number(variant.id) !== Number(variantId) && isEntryVariant(variant)) {
             next[variant.id] = '';
           }
         });
@@ -414,7 +414,7 @@ function PurchaseModal({
                         ]}
                       >
                         <Ionicons
-                          name={Number(variantQuantities[variant.id] || 0) > 0 ? 'checkmark' : Number(variant.seat_count || 0) > 0 ? 'ellipse-outline' : 'square-outline'}
+                          name={Number(variantQuantities[variant.id] || 0) > 0 ? 'checkmark' : isEntryVariant(variant) ? 'ellipse-outline' : 'square-outline'}
                           size={20}
                           color={Number(variantQuantities[variant.id] || 0) > 0 ? '#ffffff' : colors.midnight}
                         />
@@ -636,6 +636,17 @@ function getActiveVariants(event) {
   return (event?.ticket_variants || []).filter((variant) => variant.is_active !== false);
 }
 
+function isEntryVariant(variant) {
+  if (!variant) {
+    return false;
+  }
+
+  const name = String(variant.name || '').toLowerCase();
+  const isAddOn = name.includes('driver') || name.includes('add-on') || name.includes('addon');
+
+  return Number(variant.seat_count || 0) > 0 && !isAddOn;
+}
+
 function hasPaidTickets(event) {
   const variants = getActiveVariants(event);
 
@@ -655,7 +666,7 @@ function getEventPriceLabel(event) {
   }
 
   const entryPrices = variants
-    .filter((variant) => Number(variant.seat_count || 0) > 0)
+    .filter(isEntryVariant)
     .map((variant) => Number(variant.price || 0));
   const prices = entryPrices.length ? entryPrices : variants.map((variant) => Number(variant.price || 0));
   const minPrice = Math.min(...prices);
@@ -694,7 +705,7 @@ function calculatePurchase(event, variantQuantities, ticketCount) {
   return {
     items,
     legacyCount: 0,
-    seatCount: items.reduce((sum, item) => sum + Number(item.seat_count || 0) * item.quantity, 0),
+    seatCount: items.reduce((sum, item) => sum + (isEntryVariant(item) ? Number(item.seat_count || 0) : 0) * item.quantity, 0),
     totalAmount: items.reduce((sum, item) => sum + Number(item.price || 0) * item.quantity, 0),
   };
 }
