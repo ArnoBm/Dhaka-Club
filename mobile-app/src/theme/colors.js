@@ -1,0 +1,17 @@
+export const colors = {
+  navy: '#10213f',
+  navySoft: '#1e2a45',
+  midnight: '#07162d',
+  champagne: '#f8d57e',
+  gold: '#d4a62a',
+  ivory: '#fbf7ef',
+  porcelain: '#f6f1e8',
+  emerald: '#047857',
+  emeraldSoft: '#d8f3e8',
+  blue: '#1d4ed8',
+  blueSoft: '#e1ecff',
+  ink: '#0f172a',
+  slate: '#64748b',
+  border: '#e8dfcf',
+  white: '#ffffff',
+};
