@@ -24,11 +24,15 @@
       }
     },
     "extra": {
-      "apiUrl": ""
+      "apiUrl": "",
+      "eas": {
+        "projectId": "bfd942a7-66f0-4545-b3bf-a8fa8252e220"
+      }
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "plugins": []
+    "plugins": [],
+    "owner": "arnobmustakim"
   }
 }
