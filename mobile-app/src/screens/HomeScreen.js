@@ -222,7 +222,10 @@ function HomeScreen() {
         )}
       </Section>
 
-      <Pressable style={({ pressed }) => [styles.auctionBanner, pressed && styles.tilePressed]}>
+      <Pressable
+        onPress={() => navigation.navigate('Auctions')}
+        style={({ pressed }) => [styles.auctionBanner, pressed && styles.tilePressed]}
+      >
         <View style={styles.bannerIcon}>
           <Ionicons name="pricetag" size={22} color="#ffffff" />
         </View>

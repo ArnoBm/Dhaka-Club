@@ -3,6 +3,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import LoginScreen from '../screens/auth/LoginScreen';
+import AuctionsScreen from '../screens/AuctionsScreen';
 import MainTabs from './MainTabs';
 
 const Stack = createStackNavigator();
@@ -22,7 +23,10 @@ function AppNavigator() {
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {member ? (
-          <Stack.Screen name="Main" component={MainTabs} />
+          <>
+            <Stack.Screen name="Main" component={MainTabs} />
+            <Stack.Screen name="Auctions" component={AuctionsScreen} />
+          </>
         ) : (
           <Stack.Screen name="Auth" component={LoginScreen} />
         )}

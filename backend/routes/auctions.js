@@ -1,9 +1,39 @@
 const express = require('express');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 const { QueryTypes } = require('sequelize');
 const sequelize = require('../config/db');
 const auth = require('../middleware/auth');
+const { storeUploadedFile } = require('../utils/fileStorage');
 
 const router = express.Router();
+const auctionImageDir = path.join(__dirname, '..', 'uploads', 'auction-items');
+
+fs.mkdirSync(auctionImageDir, { recursive: true });
+
+const imageUpload = multer({
+    storage: multer.diskStorage({
+        destination: (req, file, callback) => {
+            callback(null, auctionImageDir);
+        },
+        filename: (req, file, callback) => {
+            const extension = path.extname(file.originalname || '').toLowerCase() || '.jpg';
+            callback(null, `auction-${Date.now()}-${Math.round(Math.random() * 1e9)}${extension}`);
+        },
+    }),
+    fileFilter: (req, file, callback) => {
+        if (!file.mimetype || !file.mimetype.startsWith('image/')) {
+            callback(new Error('Only image files are allowed.'));
+            return;
+        }
+
+        callback(null, true);
+    },
+    limits: {
+        fileSize: 5 * 1024 * 1024,
+    },
+});
 
 router.use(auth);
 
@@ -28,6 +58,8 @@ router.get('/', async (req, res) => {
     }
 
     try {
+        await ensureAuctionColumns();
+
         const auctions = await sequelize.query(
             `SELECT
                 auction_items.*,
@@ -107,7 +139,7 @@ router.get('/:id', async (req, res) => {
     }
 });
 
-router.post('/', async (req, res) => {
+router.post('/', imageUpload.single('item_image_file'), async (req, res) => {
     const data = pickFields(req.body, auctionFields);
     const createdBy = req.admin && req.admin.id;
     const requiredFields = ['title', 'starting_price', 'auction_start', 'auction_end'];
@@ -122,6 +154,16 @@ router.post('/', async (req, res) => {
     }
 
     try {
+        await ensureAuctionColumns();
+
+        if (req.file) {
+            data.item_image = await storeUploadedFile(req.file, {
+                folder: 'dhaka-club/auction-items',
+                fallbackPath: `/uploads/auction-items/${req.file.filename}`,
+                resourceType: 'image',
+            });
+        }
+
         const insertData = {
             ...data,
             created_by: createdBy,
@@ -151,8 +193,16 @@ router.post('/', async (req, res) => {
     }
 });
 
-router.put('/:id', async (req, res) => {
+router.put('/:id', imageUpload.single('item_image_file'), async (req, res) => {
     const data = pickFields(req.body, auctionFields);
+    if (req.file) {
+        data.item_image = await storeUploadedFile(req.file, {
+            folder: 'dhaka-club/auction-items',
+            fallbackPath: `/uploads/auction-items/${req.file.filename}`,
+            resourceType: 'image',
+        });
+    }
+
     const fields = Object.keys(data);
 
     if (!fields.length) {
@@ -160,6 +210,8 @@ router.put('/:id', async (req, res) => {
     }
 
     try {
+        await ensureAuctionColumns();
+
         const existingAuctions = await sequelize.query(
             'SELECT id FROM auction_items WHERE id = :id LIMIT 1',
             {
@@ -208,5 +260,27 @@ function pickFields(source, fields) {
         return picked;
     }, {});
 }
+
+async function ensureAuctionColumns() {
+    try {
+        await sequelize.query('ALTER TABLE auction_items ADD COLUMN item_image VARCHAR(255) NULL AFTER highest_bidder_id');
+    } catch (error) {
+        if (error.parent && error.parent.code === 'ER_DUP_FIELDNAME') {
+            return;
+        }
+
+        throw error;
+    }
+}
+
+router.use((error, req, res, next) => {
+    if (error instanceof multer.MulterError || error.message) {
+        return res.status(400).json({
+            message: error.code === 'LIMIT_FILE_SIZE' ? 'Image must be 5MB or smaller.' : error.message,
+        });
+    }
+
+    return next(error);
+});
 
 module.exports = router;
