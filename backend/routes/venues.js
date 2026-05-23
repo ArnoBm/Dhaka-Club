@@ -3,6 +3,7 @@ const { QueryTypes } = require('sequelize');
 const sequelize = require('../config/db');
 const auth = require('../middleware/auth');
 const writeAuditLog = require('../utils/auditLog');
+const { getMemberAccess, getPrivilegeBlockMessage } = require('../utils/memberAccess');
 
 const router = express.Router();
 
@@ -129,6 +130,14 @@ router.post('/bookings', async (req, res) => {
     }
 
     try {
+        if (req.admin && req.admin.type === 'member') {
+            const access = await getMemberAccess(req.admin.id);
+
+            if (!access.can_use_privileges) {
+                return res.status(403).json({ message: getPrivilegeBlockMessage(access) });
+            }
+        }
+
         const result = await sequelize.query(
             `INSERT INTO venue_bookings
                 (venue_id, member_id, booking_date, start_time, end_time, purpose, total_charge)

@@ -26,7 +26,7 @@ router.get('/', async (req, res) => {
     }
 
     if (search) {
-        where.push('(gr.guest_name LIKE :search OR gr.phone LIKE :search OR m.full_name LIKE :search OR gr.vehicle_number LIKE :search)');
+        where.push('(gr.guest_name LIKE :search OR gr.phone LIKE :search OR gr.host_relation LIKE :search OR m.full_name LIKE :search OR gr.vehicle_number LIKE :search)');
         replacements.search = `%${search}%`;
     }
 
@@ -51,33 +51,70 @@ router.get('/', async (req, res) => {
 });
 
 router.post('/', async (req, res) => {
-    const { guest_name, phone, member_id, visit_purpose, vehicle_number, visit_date } = req.body;
+    const { guest_name, phone, host_relation, member_id, visit_purpose, vehicle_number, visit_date } = req.body;
+    const guests = Array.isArray(req.body.guests) && req.body.guests.length
+        ? req.body.guests
+        : [{ guest_name, phone, host_relation }];
 
-    if (!guest_name || !visit_purpose || !visit_date) {
-        return res.status(400).json({ message: 'Guest name, visit purpose, and visit date are required.' });
+    if (!visit_purpose || !visit_date) {
+        return res.status(400).json({ message: 'Visit purpose and visit date are required.' });
+    }
+
+    const cleanedGuests = guests
+        .map((guest) => ({
+            guest_name: String(guest.guest_name || '').trim(),
+            phone: String(guest.phone || '').trim(),
+            host_relation: String(guest.host_relation || '').trim(),
+        }))
+        .filter((guest) => guest.guest_name);
+
+    if (!cleanedGuests.length) {
+        return res.status(400).json({ message: 'At least one guest name is required.' });
     }
 
     try {
         await ensureTables();
 
-        const result = await sequelize.query(
-            `INSERT INTO guest_requests
-             (guest_name, phone, member_id, visit_purpose, vehicle_number, visit_date)
-             VALUES (:guest_name, :phone, :member_id, :visit_purpose, :vehicle_number, :visit_date)`,
-            {
-                replacements: {
-                    guest_name,
-                    phone: phone || null,
-                    member_id: member_id || null,
-                    visit_purpose,
-                    vehicle_number: vehicle_number || null,
-                    visit_date,
-                },
-                type: QueryTypes.INSERT,
-            }
-        );
+        const transaction = await sequelize.transaction();
 
-        return res.status(201).json({ id: result[0], message: 'Guest request created.' });
+        try {
+            const createdIds = [];
+
+            for (const guest of cleanedGuests) {
+                const result = await sequelize.query(
+                    `INSERT INTO guest_requests
+                     (guest_name, phone, host_relation, member_id, visit_purpose, vehicle_number, visit_date)
+                     VALUES (:guest_name, :phone, :host_relation, :member_id, :visit_purpose, :vehicle_number, :visit_date)`,
+                    {
+                        replacements: {
+                            guest_name: guest.guest_name,
+                            phone: guest.phone || null,
+                            host_relation: guest.host_relation || null,
+                            member_id: member_id || null,
+                            visit_purpose,
+                            vehicle_number: vehicle_number || null,
+                            visit_date,
+                        },
+                        type: QueryTypes.INSERT,
+                        transaction,
+                    }
+                );
+
+                createdIds.push(result[0]);
+            }
+
+            await transaction.commit();
+
+            return res.status(201).json({
+                ids: createdIds,
+                id: createdIds[0],
+                count: createdIds.length,
+                message: createdIds.length > 1 ? 'Guest requests created.' : 'Guest request created.',
+            });
+        } catch (error) {
+            await transaction.rollback();
+            throw error;
+        }
     } catch (error) {
         return res.status(500).json({ message: 'Failed to create guest request.', error: error.message });
     }
@@ -132,6 +169,7 @@ function ensureTables() {
                 id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
                 guest_name VARCHAR(150) NOT NULL,
                 phone VARCHAR(30) NULL,
+                host_relation VARCHAR(80) NULL,
                 member_id BIGINT UNSIGNED NULL,
                 visit_purpose VARCHAR(255) NOT NULL,
                 vehicle_number VARCHAR(80) NULL,
@@ -146,7 +184,18 @@ function ensureTables() {
                 KEY idx_guest_requests_status (status),
                 KEY idx_guest_requests_visit_date (visit_date)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci`
-        ).catch((error) => {
+        ).then(async () => {
+            await sequelize.query(
+                `ALTER TABLE guest_requests
+                 ADD COLUMN host_relation VARCHAR(80) NULL AFTER phone`
+            ).catch((error) => {
+                if (error.parent && error.parent.code === 'ER_DUP_FIELDNAME') {
+                    return null;
+                }
+
+                throw error;
+            });
+        }).catch((error) => {
             setupPromise = null;
             throw error;
         });

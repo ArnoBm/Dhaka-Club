@@ -157,7 +157,7 @@ async function getActiveMember(req) {
     }
 
     const members = await sequelize.query(
-        `SELECT id, member_id, full_name, membership_group, status
+        `SELECT id, member_id, full_name, membership_group, member_type, status
          FROM members
          WHERE id = :id
          LIMIT 1`,
@@ -167,7 +167,7 @@ async function getActiveMember(req) {
         }
     );
 
-    return members[0] && members[0].status === 'Active' ? members[0] : null;
+    return members[0] && members[0].status !== 'Suspended' ? members[0] : null;
 }
 
 function baseUpdateQuery(member) {
@@ -212,6 +212,8 @@ function baseUpdateQuery(member) {
                             AND (
                                 nt.target_type = 'All Members'
                                 OR (nt.target_type = 'Membership Group' AND nt.target_value = :membershipGroup)
+                                OR (nt.target_type = 'Membership Type' AND nt.target_value = :memberType)
+                                OR (nt.target_type = 'Member Status' AND nt.target_value = :memberStatus)
                                 OR (nt.target_type = 'Specific Member' AND nt.target_value = :memberIdString)
                             )
                       )
@@ -225,6 +227,8 @@ function memberReplacements(member) {
         memberId: member.id,
         memberIdString: String(member.id),
         membershipGroup: member.membership_group || '',
+        memberType: member.member_type || '',
+        memberStatus: member.status || '',
     };
 }
 
@@ -394,7 +398,7 @@ async function migrateUpdateTables() {
         `CREATE TABLE IF NOT EXISTS notification_targets (
             id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
             notification_id BIGINT UNSIGNED NOT NULL,
-            target_type ENUM('All Members', 'Membership Group', 'Specific Member') NOT NULL DEFAULT 'All Members',
+            target_type ENUM('All Members', 'Membership Group', 'Membership Type', 'Member Status', 'Specific Member') NOT NULL DEFAULT 'All Members',
             target_value VARCHAR(150) NULL,
             created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (id),
@@ -410,7 +414,7 @@ async function migrateUpdateTables() {
             body TEXT NOT NULL,
             type ENUM('Push Notification', 'Notice Alert', 'Event Reminder', 'Renewal Reminder') NOT NULL,
             channel ENUM('Push', 'Notice', 'Event', 'Renewal') NOT NULL DEFAULT 'Push',
-            target_type ENUM('All Members', 'Membership Group', 'Specific Member') NOT NULL,
+            target_type ENUM('All Members', 'Membership Group', 'Membership Type', 'Member Status', 'Specific Member') NOT NULL,
             target_value VARCHAR(150) NULL,
             recipient_count INT UNSIGNED NOT NULL DEFAULT 0,
             created_by BIGINT UNSIGNED NOT NULL,
@@ -438,6 +442,7 @@ async function migrateUpdateTables() {
     );
 
     await ensureDeliveryLinkColumn();
+    await alterTargetTypeEnums();
 
     await addNotificationColumn('category', "ENUM('Notices', 'Events', 'Bookings', 'Membership', 'Community', 'Emergency', 'General') NULL AFTER type");
     await addNotificationColumn('priority', "ENUM('Normal', 'Important', 'Critical') NOT NULL DEFAULT 'Normal' AFTER category");
@@ -445,6 +450,19 @@ async function migrateUpdateTables() {
     await addNotificationColumn('related_id', 'BIGINT UNSIGNED NULL AFTER related_type');
     await addNotificationColumn('attachment_url', 'VARCHAR(255) NULL AFTER related_id');
     await addNotificationColumn('sender_admin_id', 'BIGINT UNSIGNED NULL AFTER attachment_url');
+}
+
+async function alterTargetTypeEnums() {
+    await Promise.all([
+        sequelize.query(
+            `ALTER TABLE notification_broadcasts
+             MODIFY target_type ENUM('All Members', 'Membership Group', 'Membership Type', 'Member Status', 'Specific Member') NOT NULL`
+        ).catch(() => null),
+        sequelize.query(
+            `ALTER TABLE notification_targets
+             MODIFY target_type ENUM('All Members', 'Membership Group', 'Membership Type', 'Member Status', 'Specific Member') NOT NULL DEFAULT 'All Members'`
+        ).catch(() => null),
+    ]);
 }
 
 async function ensureDeliveryLinkColumn() {

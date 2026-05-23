@@ -1,11 +1,14 @@
 import { useState } from 'react'
 import toast from 'react-hot-toast'
+import { Eye, EyeOff } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import api from '../api/axios'
+import { getDefaultPath } from '../utils/accessControl'
 
 function Login() {
-  const [email, setEmail] = useState('')
+  const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
+  const [passwordVisible, setPasswordVisible] = useState(false)
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
 
@@ -14,12 +17,12 @@ function Login() {
     setLoading(true)
 
     try {
-      const response = await api.post('/auth/login', { email, password })
+      const response = await api.post('/auth/login', { phone: identifier, password })
       const { token, admin } = response.data
 
       localStorage.setItem('token', token)
       localStorage.setItem('admin', JSON.stringify(admin))
-      navigate('/', { replace: true })
+      navigate(getDefaultPath(admin), { replace: true })
     } catch (error) {
       const message =
         error.response?.data?.message || 'Unable to sign in. Please try again.'
@@ -40,20 +43,20 @@ function Login() {
         <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
           <div>
             <label
-              htmlFor="email"
+              htmlFor="identifier"
               className="block text-sm font-medium text-slate-700"
             >
-              Email
+              Mobile Number or Email
             </label>
             <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
+              id="identifier"
+              type="text"
+              value={identifier}
+              onChange={(event) => setIdentifier(event.target.value)}
               required
-              autoComplete="email"
+              autoComplete="username"
               className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2.5 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10"
-              placeholder="admin@dhakaclub.com"
+              placeholder="01700000000"
             />
           </div>
 
@@ -64,16 +67,26 @@ function Login() {
             >
               Password
             </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              required
-              autoComplete="current-password"
-              className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2.5 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10"
-              placeholder="Enter your password"
-            />
+            <div className="mt-2 flex rounded-md border border-slate-300 focus-within:border-slate-900 focus-within:ring-2 focus-within:ring-slate-900/10">
+              <input
+                id="password"
+                type={passwordVisible ? 'text' : 'password'}
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                required
+                autoComplete="current-password"
+                className="min-w-0 flex-1 rounded-l-md px-3 py-2.5 text-sm text-slate-950 outline-none placeholder:text-slate-400"
+                placeholder="Enter your password"
+              />
+              <button
+                type="button"
+                onClick={() => setPasswordVisible((value) => !value)}
+                className="inline-flex w-11 items-center justify-center rounded-r-md text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+                aria-label={passwordVisible ? 'Hide password' : 'Show password'}
+              >
+                {passwordVisible ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
           </div>
 
           <button

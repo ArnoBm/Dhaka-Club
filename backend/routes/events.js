@@ -7,6 +7,7 @@ const sequelize = require('../config/db');
 const auth = require('../middleware/auth');
 const writeAuditLog = require('../utils/auditLog');
 const { storeUploadedFile } = require('../utils/fileStorage');
+const { getMemberAccess, getPrivilegeBlockMessage } = require('../utils/memberAccess');
 
 const router = express.Router();
 const coverDir = path.join(__dirname, '..', 'uploads', 'event-covers');
@@ -364,6 +365,13 @@ router.post('/:id/register', async (req, res) => {
     const transaction = await sequelize.transaction();
 
     try {
+        const access = await getMemberAccess(memberId, transaction);
+
+        if (!access.can_use_privileges) {
+            await transaction.rollback();
+            return res.status(403).json({ message: getPrivilegeBlockMessage(access) });
+        }
+
         const events = await sequelize.query(
             `SELECT id, title, ticket_price, total_seats, available_seats, requires_ticket, status
              FROM events

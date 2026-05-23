@@ -1,4 +1,4 @@
-USE dhaka_club;
+
 
 SET FOREIGN_KEY_CHECKS = 0;
 
@@ -41,19 +41,18 @@ CREATE TABLE members (
     address VARCHAR(255) NULL,
     profile_photo VARCHAR(255) NULL,
     password VARCHAR(255) NULL,
-    expo_push_token VARCHAR(255) NULL,
     member_type ENUM('Life Member', 'General Member', 'Honorary Member', 'Special Member', 'Officers of Defense Forces') NOT NULL DEFAULT 'General Member',
     membership_group VARCHAR(100) NULL,
     membership_expiry DATE NULL,
     status ENUM('Active', 'Inactive', 'Suspended') NOT NULL DEFAULT 'Active',
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    updated_at DATETIME NULL,
     PRIMARY KEY (id),
     UNIQUE KEY uq_members_member_id (member_id),
     UNIQUE KEY uq_members_email (email),
     KEY idx_members_status (status),
     KEY idx_members_membership_group (membership_group)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 CREATE TABLE admins (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -67,7 +66,7 @@ CREATE TABLE admins (
     PRIMARY KEY (id),
     UNIQUE KEY uq_admins_email (email),
     UNIQUE KEY uq_admins_phone (phone)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 CREATE TABLE notices (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -84,7 +83,7 @@ CREATE TABLE notices (
         FOREIGN KEY (created_by) REFERENCES admins (id)
         ON UPDATE CASCADE
         ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 CREATE TABLE events (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -109,7 +108,7 @@ CREATE TABLE events (
         ON UPDATE CASCADE
         ON DELETE RESTRICT,
     CONSTRAINT chk_events_seats CHECK (available_seats <= total_seats)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 CREATE TABLE event_registrations (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -136,7 +135,7 @@ CREATE TABLE event_registrations (
         FOREIGN KEY (member_id) REFERENCES members (id)
         ON UPDATE CASCADE
         ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 CREATE TABLE event_ticket_variants (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -149,10 +148,10 @@ CREATE TABLE event_ticket_variants (
     sort_order INT UNSIGNED NOT NULL DEFAULT 0,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    updated_at DATETIME NULL,
     PRIMARY KEY (id),
     KEY idx_event_ticket_variants_event_id (event_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 CREATE TABLE event_registration_items (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -167,7 +166,7 @@ CREATE TABLE event_registration_items (
     PRIMARY KEY (id),
     KEY idx_event_registration_items_registration_id (registration_id),
     KEY idx_event_registration_items_variant_id (ticket_variant_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 CREATE TABLE venues (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -179,7 +178,7 @@ CREATE TABLE venues (
     PRIMARY KEY (id),
     UNIQUE KEY uq_venues_name (name),
     KEY idx_venues_status (status)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 INSERT INTO venues (name, description, capacity, per_day_charge, status) VALUES
 ('Royal Bengal Dining', 'Formal dining venue for club members and guests.', 120, 25000.00, 'Available'),
@@ -218,7 +217,7 @@ CREATE TABLE venue_bookings (
         ON UPDATE CASCADE
         ON DELETE CASCADE,
     CONSTRAINT chk_venue_bookings_time CHECK (end_time > start_time)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 CREATE TABLE auction_items (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -245,7 +244,7 @@ CREATE TABLE auction_items (
         ON UPDATE CASCADE
         ON DELETE RESTRICT,
     CONSTRAINT chk_auction_items_dates CHECK (auction_end > auction_start)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 CREATE TABLE bids (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -265,7 +264,7 @@ CREATE TABLE bids (
         FOREIGN KEY (member_id) REFERENCES members (id)
         ON UPDATE CASCADE
         ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 CREATE TABLE community_requests (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -285,7 +284,7 @@ CREATE TABLE community_requests (
         FOREIGN KEY (member_id) REFERENCES members (id)
         ON UPDATE CASCADE
         ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 CREATE TABLE card_renewals (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -309,7 +308,7 @@ CREATE TABLE card_renewals (
         ON UPDATE CASCADE
         ON DELETE SET NULL,
     CONSTRAINT chk_card_renewals_dates CHECK (expiry_date >= renewal_date)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 CREATE TABLE notifications (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -333,7 +332,7 @@ CREATE TABLE notifications (
         FOREIGN KEY (member_id) REFERENCES members (id)
         ON UPDATE CASCADE
         ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 CREATE TABLE notification_reads (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -344,12 +343,12 @@ CREATE TABLE notification_reads (
     is_saved BOOLEAN NOT NULL DEFAULT FALSE,
     is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    updated_at DATETIME NULL,
     PRIMARY KEY (id),
     UNIQUE KEY uq_notification_reads_member_notification (member_id, notification_id),
     KEY idx_notification_reads_member_read (member_id, is_read),
     KEY idx_notification_reads_deleted (is_deleted)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 CREATE TABLE notification_targets (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -360,7 +359,7 @@ CREATE TABLE notification_targets (
     PRIMARY KEY (id),
     KEY idx_notification_targets_notification (notification_id),
     KEY idx_notification_targets_target (target_type, target_value)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 CREATE TABLE guest_requests (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -380,7 +379,7 @@ CREATE TABLE guest_requests (
     UNIQUE KEY uq_guest_requests_qr_code (qr_code),
     KEY idx_guest_requests_status (status),
     KEY idx_guest_requests_visit_date (visit_date)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 CREATE TABLE rfid_cards (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -393,7 +392,7 @@ CREATE TABLE rfid_cards (
     PRIMARY KEY (id),
     UNIQUE KEY uq_rfid_cards_uid (card_uid),
     KEY idx_rfid_cards_status (status)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 INSERT INTO rfid_cards (card_uid, card_label, status, notes, updated_at) VALUES
 ('RFID-001', 'Gate Card 01', 'Available', 'Default gate RFID card', NOW()),
@@ -443,7 +442,7 @@ CREATE TABLE visitor_entries (
     KEY idx_visitor_entries_status (entry_status),
     KEY idx_visitor_entries_entry_time (entry_time),
     KEY idx_visitor_entries_card (rfid_card_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 CREATE TABLE rfid_scan_logs (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -459,7 +458,7 @@ CREATE TABLE rfid_scan_logs (
     KEY idx_rfid_scan_logs_card (rfid_card_id),
     KEY idx_rfid_scan_logs_visitor (visitor_entry_id),
     KEY idx_rfid_scan_logs_scanned_at (scanned_at)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 CREATE TABLE entry_logs (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -481,7 +480,7 @@ CREATE TABLE entry_logs (
     KEY idx_entry_logs_scanned_at (scanned_at),
     KEY idx_entry_logs_qr_type (qr_type),
     KEY idx_entry_logs_allowed (entry_allowed)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 CREATE TABLE notification_broadcasts (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -497,7 +496,7 @@ CREATE TABLE notification_broadcasts (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     KEY idx_notification_broadcasts_created_at (created_at)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 CREATE TABLE notification_deliveries (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -512,7 +511,7 @@ CREATE TABLE notification_deliveries (
     KEY idx_notification_deliveries_broadcast (broadcast_id),
     KEY idx_notification_deliveries_notification (notification_id),
     KEY idx_notification_deliveries_status (status)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 CREATE TABLE audit_logs (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -526,7 +525,7 @@ CREATE TABLE audit_logs (
     KEY idx_audit_logs_module (module),
     KEY idx_audit_logs_admin (admin_id),
     KEY idx_audit_logs_created_at (created_at)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 CREATE TABLE payments (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -548,4 +547,4 @@ CREATE TABLE payments (
     KEY idx_payments_status (status),
     KEY idx_payments_provider (provider),
     KEY idx_payments_related (related_type, related_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;

@@ -10,12 +10,13 @@ const seedAdmin = async () => {
         const hashedPassword = await bcrypt.hash(password, 10);
 
         await sequelize.query(
-            `INSERT INTO admins (name, email, password, role)
-             VALUES (:name, :email, :password, :role)`,
+            `INSERT INTO admins (name, email, phone, password, role)
+             VALUES (:name, :email, :phone, :password, :role)`,
             {
                 replacements: {
                     name: 'Super Admin',
                     email: 'admin@dhakaclub.com',
+                    phone: '01700000000',
                     password: hashedPassword,
                     role: 'Super Admin',
                 },
@@ -25,6 +26,7 @@ const seedAdmin = async () => {
 
         console.log('Super Admin created successfully.');
         console.log('Email: admin@dhakaclub.com');
+        console.log('Phone: 01700000000');
         console.log('Password: admin123');
         process.exit(0);
     } catch (error) {

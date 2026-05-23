@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
-import { FileText, Paperclip, Send } from 'lucide-react'
+import { Eye, EyeOff, FileText, Paperclip, Send } from 'lucide-react'
 import api from '../api/axios'
 import { getAdminSocket } from '../api/socket'
 
@@ -13,6 +13,15 @@ const initialForm = {
   target_value: '',
   attachment: null,
 }
+const memberTypes = [
+  'Life Member',
+  'General Member',
+  'Honorary Member',
+  'Special Member',
+  'Officers of Defense Forces',
+]
+const memberStatuses = ['Active', 'Inactive', 'Suspended']
+const targetOptions = ['All Members', 'Membership Group', 'Membership Type', 'Member Status', 'Specific Member']
 
 function BroadcastCenter() {
   const [broadcasts, setBroadcasts] = useState([])
@@ -20,17 +29,18 @@ function BroadcastCenter() {
   const [members, setMembers] = useState([])
   const [form, setForm] = useState(initialForm)
   const [saving, setSaving] = useState(false)
+  const [expandedBroadcastId, setExpandedBroadcastId] = useState(null)
 
   const loadData = useCallback(async () => {
     try {
       const [broadcastResponse, groupResponse, memberResponse] = await Promise.all([
         api.get('/broadcasts'),
         api.get('/members/groups'),
-        api.get('/members'),
+        api.get('/members', { params: { limit: 1000 } }),
       ])
       setBroadcasts(broadcastResponse.data || [])
       setGroups(groupResponse.data || [])
-      setMembers(memberResponse.data || [])
+      setMembers(Array.isArray(memberResponse.data) ? memberResponse.data : memberResponse.data?.data || [])
     } catch (error) {
       toast.error('Failed to load broadcast center.')
     }
@@ -92,9 +102,15 @@ function BroadcastCenter() {
               <textarea value={form.body} onChange={(event) => setForm({ ...form, body: event.target.value })} rows={4} required className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-[#1e2a45]" />
             </label>
             <Select label="Type" value={form.type} onChange={(value) => setForm({ ...form, type: value, channel: channelFromType(value) })} options={['Push Notification', 'Notice Alert', 'Event Reminder', 'Renewal Reminder']} />
-            <Select label="Target" value={form.target_type} onChange={(value) => setForm({ ...form, target_type: value, target_value: '' })} options={['All Members', 'Membership Group', 'Specific Member']} />
+            <Select label="Target" value={form.target_type} onChange={(value) => setForm({ ...form, target_type: value, target_value: '' })} options={targetOptions} />
             {form.target_type === 'Membership Group' && (
               <Select label="Membership Group" value={form.target_value} onChange={(value) => setForm({ ...form, target_value: value })} options={['', ...groups]} required />
+            )}
+            {form.target_type === 'Membership Type' && (
+              <Select label="Membership Type" value={form.target_value} onChange={(value) => setForm({ ...form, target_value: value })} options={['', ...memberTypes]} required />
+            )}
+            {form.target_type === 'Member Status' && (
+              <Select label="Member Status" value={form.target_value} onChange={(value) => setForm({ ...form, target_value: value })} options={['', ...memberStatuses]} required />
             )}
             {form.target_type === 'Specific Member' && (
               <Select label="Member" value={form.target_value} onChange={(value) => setForm({ ...form, target_value: value })} options={['', ...members.map((member) => ({ label: `${member.full_name} (${member.member_id})`, value: member.id }))]} required />
@@ -146,11 +162,30 @@ function BroadcastCenter() {
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <h4 className="font-semibold text-slate-950">{broadcast.title}</h4>
+                    {broadcast.target_value ? (
+                      <p className="mt-1 text-xs font-medium text-slate-400">Target: {broadcast.target_value}</p>
+                    ) : null}
                     <p className="mt-1 text-sm text-slate-500">{broadcast.type} • {broadcast.target_type}</p>
                   </div>
                   <span className="rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700 ring-1 ring-green-600/20">
                     Sent to {broadcast.recipient_count}
                   </span>
+                </div>
+                <div className="mt-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-2.5">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Sent Text</p>
+                  <p className={`mt-1 whitespace-pre-wrap text-sm leading-6 text-slate-700 ${expandedBroadcastId === broadcast.id ? '' : 'line-clamp-2'}`}>
+                    {broadcast.body || 'No message text found.'}
+                  </p>
+                  {String(broadcast.body || '').length > 120 ? (
+                    <button
+                      type="button"
+                      onClick={() => setExpandedBroadcastId(expandedBroadcastId === broadcast.id ? null : broadcast.id)}
+                      className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-[#1e2a45] hover:text-[#334466]"
+                    >
+                      {expandedBroadcastId === broadcast.id ? <EyeOff size={14} /> : <Eye size={14} />}
+                      {expandedBroadcastId === broadcast.id ? 'Hide full text' : 'View full text'}
+                    </button>
+                  ) : null}
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2 text-xs font-medium">
                   <span className="rounded-full bg-blue-50 px-2.5 py-1 text-blue-700">Sent {broadcast.sent_count || 0}</span>

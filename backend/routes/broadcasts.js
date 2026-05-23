@@ -80,6 +80,10 @@ router.post('/', attachmentUpload.single('attachment'), async (req, res) => {
         return res.status(400).json({ message: 'Title, body, type, channel, and target are required.' });
     }
 
+    if (target_type !== 'All Members' && !target_value) {
+        return res.status(400).json({ message: 'Target value is required for the selected audience.' });
+    }
+
     try {
         await ensureTables();
 
@@ -195,6 +199,20 @@ async function findRecipients(targetType, targetValue) {
         );
     }
 
+    if (targetType === 'Membership Type') {
+        return sequelize.query(
+            'SELECT id, expo_push_token FROM members WHERE member_type = :memberType AND status = "Active"',
+            { replacements: { memberType: targetValue }, type: QueryTypes.SELECT }
+        );
+    }
+
+    if (targetType === 'Member Status') {
+        return sequelize.query(
+            'SELECT id, expo_push_token FROM members WHERE status = :status',
+            { replacements: { status: targetValue }, type: QueryTypes.SELECT }
+        );
+    }
+
     return sequelize.query(
         'SELECT id, expo_push_token FROM members WHERE status = "Active"',
         { type: QueryTypes.SELECT }
@@ -222,7 +240,7 @@ function ensureTables() {
                     body TEXT NOT NULL,
                     type ENUM('Push Notification', 'Notice Alert', 'Event Reminder', 'Renewal Reminder') NOT NULL,
                     channel ENUM('Push', 'Notice', 'Event', 'Renewal') NOT NULL DEFAULT 'Push',
-                    target_type ENUM('All Members', 'Membership Group', 'Specific Member') NOT NULL,
+                    target_type ENUM('All Members', 'Membership Group', 'Membership Type', 'Member Status', 'Specific Member') NOT NULL,
                     target_value VARCHAR(150) NULL,
                     attachment_url VARCHAR(255) NULL,
                     recipient_count INT UNSIGNED NOT NULL DEFAULT 0,
@@ -252,7 +270,7 @@ function ensureTables() {
                 `CREATE TABLE IF NOT EXISTS notification_targets (
                     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
                     notification_id BIGINT UNSIGNED NOT NULL,
-                    target_type ENUM('All Members', 'Membership Group', 'Specific Member') NOT NULL DEFAULT 'All Members',
+                    target_type ENUM('All Members', 'Membership Group', 'Membership Type', 'Member Status', 'Specific Member') NOT NULL DEFAULT 'All Members',
                     target_value VARCHAR(150) NULL,
                     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     PRIMARY KEY (id),
@@ -264,6 +282,7 @@ function ensureTables() {
             addBroadcastColumn('attachment_url', 'VARCHAR(255) NULL AFTER target_value'),
             addNotificationColumn('attachment_url', 'VARCHAR(255) NULL AFTER related_id'),
             addMemberColumn('expo_push_token', 'VARCHAR(255) NULL AFTER password'),
+            alterTargetTypeEnums(),
             addDeliveryIndex(),
         ]).catch((error) => {
             setupPromise = null;
@@ -272,6 +291,19 @@ function ensureTables() {
     }
 
     return setupPromise;
+}
+
+async function alterTargetTypeEnums() {
+    await Promise.all([
+        sequelize.query(
+            `ALTER TABLE notification_broadcasts
+             MODIFY target_type ENUM('All Members', 'Membership Group', 'Membership Type', 'Member Status', 'Specific Member') NOT NULL`
+        ).catch(() => null),
+        sequelize.query(
+            `ALTER TABLE notification_targets
+             MODIFY target_type ENUM('All Members', 'Membership Group', 'Membership Type', 'Member Status', 'Specific Member') NOT NULL DEFAULT 'All Members'`
+        ).catch(() => null),
+    ]);
 }
 
 async function addMemberColumn(columnName, definition) {

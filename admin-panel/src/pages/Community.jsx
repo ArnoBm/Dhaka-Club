@@ -85,7 +85,8 @@ function Community() {
 
     try {
       const response = await api.get('/members', { params: { search: value } })
-      setMemberOptions((response.data || []).slice(0, 6))
+      const members = Array.isArray(response.data) ? response.data : response.data?.data || []
+      setMemberOptions(members.slice(0, 6))
     } catch (error) {
       toast.error('Failed to search members.')
     }

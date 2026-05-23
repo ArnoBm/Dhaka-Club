@@ -544,7 +544,7 @@ function BookingModal({ venues, onClose, onCreated }) {
         const response = await api.get('/members', {
           params: { search: memberSearch.trim(), status: 'Active' },
         })
-        setMemberResults(response.data || [])
+        setMemberResults(Array.isArray(response.data) ? response.data : response.data?.data || [])
       } catch (error) {
         toast.error('Failed to search members.')
       } finally {

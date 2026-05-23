@@ -18,8 +18,10 @@ import QRCode from 'react-native-qrcode-svg';
 import api, { getApiBaseURL } from '../api/axios';
 import { colors } from '../theme/colors';
 import ScreenContainer from '../components/ScreenContainer';
+import { useAuth } from '../context/AuthContext';
 
 function EventsScreen() {
+  const { member } = useAuth();
   const [events, setEvents] = useState([]);
   const [passes, setPasses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -72,6 +74,14 @@ function EventsScreen() {
   };
 
   const openPurchase = (event) => {
+    if (!canUseMemberPrivileges(member)) {
+      Alert.alert(
+        'Renewal Required',
+        'Your membership is not eligible for event participation. You can browse the app, but renewal is required to participate.'
+      );
+      return;
+    }
+
     const availableSeats = Number(event.available_seats || 0);
     const hasVariants = getActiveVariants(event).length > 0;
     const hasSeatVariant = getActiveVariants(event).some(isEntryVariant);
@@ -237,6 +247,7 @@ function EventsScreen() {
               const hasVariants = activeVariants.length > 0;
               const hasSeatVariant = activeVariants.some(isEntryVariant);
               const canRegister =
+                canUseMemberPrivileges(member) &&
                 event.status === 'Ongoing' && (availableSeats > 0 || (hasVariants && !hasSeatVariant));
 
               return (
@@ -295,6 +306,8 @@ function EventsScreen() {
                           ? 'View Pass'
                           : availableSeats < 1
                             ? 'Sold Out'
+                            : !canUseMemberPrivileges(member)
+                              ? 'Renew Required'
                             : event.status !== 'Ongoing'
                               ? 'View Details'
                               : isPaid
@@ -745,6 +758,24 @@ function buildAssetUrl(path) {
   }
 
   return `${getApiBaseURL().replace(/\/api\/?$/, '')}${path}`;
+}
+
+function canUseMemberPrivileges(member) {
+  if (!member || member.status === 'Suspended' || member.status === 'Inactive') {
+    return false;
+  }
+
+  if (member.can_use_privileges === false) {
+    return false;
+  }
+
+  if (!member.membership_expiry) {
+    return true;
+  }
+
+  const expiry = new Date(`${String(member.membership_expiry).slice(0, 10)}T23:59:59`);
+
+  return !Number.isNaN(expiry.getTime()) && expiry >= new Date();
 }
 
 const styles = StyleSheet.create({

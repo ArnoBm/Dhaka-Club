@@ -21,6 +21,8 @@ const auditRoutes = require('./routes/audit');
 const paymentRoutes = require('./routes/payments');
 const memberUpdateRoutes = require('./routes/memberUpdates');
 const demoPaymentRoutes = require('./routes/demoPayment');
+const auth = require('./middleware/auth');
+const { adminRoles, securityRoles, requireRoles } = require('./middleware/roles');
 
 dotenv.config();
 
@@ -46,19 +48,19 @@ app.use(express.json());
 app.use('/uploads', express.static('uploads'));
 
 app.use('/api/auth', authRoutes);
-app.use('/api/members', memberRoutes);
-app.use('/api/notices', noticeRoutes);
-app.use('/api/events', eventRoutes);
-app.use('/api/venues', venueRoutes);
-app.use('/api/auctions', auctionRoutes);
-app.use('/api/renewals', renewalRoutes);
-app.use('/api/community', communityRoutes);
-app.use('/api/security', securityRoutes);
-app.use('/api/analytics', analyticsRoutes);
-app.use('/api/broadcasts', broadcastRoutes);
-app.use('/api/guests', guestRoutes);
-app.use('/api/audit', auditRoutes);
-app.use('/api/payments', paymentRoutes);
+app.use('/api/members', auth, requireRoles(adminRoles), memberRoutes);
+app.use('/api/notices', auth, requireRoles(adminRoles), noticeRoutes);
+app.use('/api/events', auth, requireRoles(adminRoles), eventRoutes);
+app.use('/api/venues', auth, requireRoles(adminRoles), venueRoutes);
+app.use('/api/auctions', auth, requireRoles(adminRoles), auctionRoutes);
+app.use('/api/renewals', auth, requireRoles(adminRoles), renewalRoutes);
+app.use('/api/community', auth, requireRoles(adminRoles), communityRoutes);
+app.use('/api/security', auth, requireRoles(securityRoles), securityRoutes);
+app.use('/api/analytics', auth, requireRoles(adminRoles), analyticsRoutes);
+app.use('/api/broadcasts', auth, requireRoles(adminRoles), broadcastRoutes);
+app.use('/api/guests', auth, requireRoles(adminRoles), guestRoutes);
+app.use('/api/audit', auth, requireRoles(adminRoles), auditRoutes);
+app.use('/api/payments', auth, requireRoles(adminRoles), paymentRoutes);
 app.use('/api/member', memberUpdateRoutes);
 app.use('/api/demo-payment', demoPaymentRoutes);
 

@@ -36,7 +36,7 @@ function Dashboard() {
         ])
 
         setDashboard({
-          members: membersResponse.data || [],
+          members: Array.isArray(membersResponse.data) ? membersResponse.data : membersResponse.data?.data || [],
           upcomingEvents: eventsResponse.data || [],
           pendingBookings: bookingsResponse.data || [],
           expiringMemberships: expiringResponse.data || [],
