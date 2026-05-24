@@ -199,6 +199,7 @@ CREATE TABLE venue_bookings (
     venue_id BIGINT UNSIGNED NOT NULL,
     member_id BIGINT UNSIGNED NOT NULL,
     booking_date DATE NOT NULL,
+    booking_shift ENUM('Morning', 'Evening') NOT NULL DEFAULT 'Morning',
     start_time TIME NOT NULL,
     end_time TIME NOT NULL,
     purpose VARCHAR(200) NOT NULL,
@@ -209,6 +210,7 @@ CREATE TABLE venue_bookings (
     KEY idx_venue_bookings_venue_id (venue_id),
     KEY idx_venue_bookings_member_id (member_id),
     KEY idx_venue_bookings_date (booking_date),
+    KEY idx_venue_bookings_shift (venue_id, booking_date, booking_shift, status),
     CONSTRAINT fk_venue_bookings_venue_id
         FOREIGN KEY (venue_id) REFERENCES venues (id)
         ON UPDATE CASCADE

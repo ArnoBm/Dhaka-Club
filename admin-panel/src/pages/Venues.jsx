@@ -13,6 +13,10 @@ import {
 import api from '../api/axios'
 
 const bookingStatuses = ['All', 'Pending', 'Confirmed', 'Cancelled']
+const venueShifts = [
+  { value: 'Morning', label: 'Morning Shift', time: '11:00 AM - 5:00 PM' },
+  { value: 'Evening', label: 'Evening Shift', time: '6:00 PM - 12:00 AM' },
+]
 
 function Venues() {
   const [activeTab, setActiveTab] = useState('Availability')
@@ -173,16 +177,22 @@ function AvailabilityTab({
   const isDateBooked = (date) => {
     const key = toDateKey(date)
 
-    return confirmedBookings.some((booking) => {
+    const shiftCount = new Set()
+
+    confirmedBookings.forEach((booking) => {
       if (toDateKey(booking.booking_date) !== key) {
-        return false
+        return
       }
 
-      return (
+      if (
         selectedVenueId === 'all' ||
         String(booking.venue_id) === String(selectedVenueId)
-      )
+      ) {
+        shiftCount.add(`${booking.venue_id}-${booking.booking_shift || booking.start_time}`)
+      }
     })
+
+    return selectedVenueId === 'all' ? shiftCount.size > 0 : shiftCount.size >= 2
   }
 
   return (
@@ -191,7 +201,7 @@ function AvailabilityTab({
         <div>
           <h3 className="font-semibold text-slate-950">Venue Availability Calendar</h3>
           <p className="text-sm text-slate-500">
-            Occupied dates are marked light red. Select a venue to see its own red and green calendar.
+            Each venue has two daily shifts. Fully occupied venue dates are red; partially booked dates show slot details.
           </p>
         </div>
         <div className="grid gap-3 sm:grid-cols-2 xl:min-w-[520px]">
@@ -367,6 +377,19 @@ function AvailabilityTab({
                     </div>
                     <AvailabilityBadge status={venue.availability} />
                   </div>
+                  <div className="mt-3 grid gap-2">
+                    {venueShifts.map((shift) => (
+                      <div
+                        key={shift.value}
+                        className="flex items-center justify-between rounded-md bg-slate-50 px-3 py-2 text-xs"
+                      >
+                        <span className="font-semibold text-slate-700">{shift.label}</span>
+                        <span className={shiftStatusClass(venue[`${shift.value.toLowerCase()}_status`])}>
+                          {venue[`${shift.value.toLowerCase()}_status`] || 'Available'} · {shift.time}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                   <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-sm font-medium text-slate-700">
                     <Building2 size={16} />
                     ৳{venue.per_day_charge || 0} per day
@@ -437,8 +460,8 @@ function BookingsTab({
                 <Th>Venue Name</Th>
                 <Th>Member Name</Th>
                 <Th>Date</Th>
-                <Th>Start Time</Th>
-                <Th>End Time</Th>
+                <Th>Shift</Th>
+                <Th>Time</Th>
                 <Th>Purpose</Th>
                 <Th>Charge</Th>
                 <Th>Status</Th>
@@ -454,8 +477,8 @@ function BookingsTab({
                     <Td>{booking.venue_name}</Td>
                     <Td>{booking.member_full_name}</Td>
                     <Td>{formatDate(booking.booking_date)}</Td>
-                    <Td>{formatTime(booking.start_time)}</Td>
-                    <Td>{formatTime(booking.end_time)}</Td>
+                    <Td>{formatShift(booking.booking_shift)}</Td>
+                    <Td>{formatTimeRange(booking)}</Td>
                     <Td>{booking.purpose}</Td>
                     <Td>৳{booking.total_charge || 0}</Td>
                     <Td>
@@ -520,8 +543,7 @@ function BookingModal({ venues, onClose, onCreated }) {
     venue_id: '',
     member_id: '',
     booking_date: today(),
-    start_time: '',
-    end_time: '',
+    booking_shift: 'Morning',
     purpose: '',
     total_charge: '',
   })
@@ -574,11 +596,6 @@ function BookingModal({ venues, onClose, onCreated }) {
       return
     }
 
-    if (form.start_time >= form.end_time) {
-      toast.error('End time must be after start time.')
-      return
-    }
-
     setSaving(true)
 
     try {
@@ -586,8 +603,7 @@ function BookingModal({ venues, onClose, onCreated }) {
         venue_id: form.venue_id,
         member_id: form.member_id,
         booking_date: form.booking_date,
-        start_time: form.start_time,
-        end_time: form.end_time,
+        booking_shift: form.booking_shift,
         purpose: form.purpose,
         total_charge: Number(form.total_charge || 0),
       })
@@ -702,20 +718,21 @@ function BookingModal({ venues, onClose, onCreated }) {
               onChange={(value) => updateField('booking_date', value)}
               required
             />
-            <BookingField
-              label="Start Time"
-              type="time"
-              value={form.start_time}
-              onChange={(value) => updateField('start_time', value)}
-              required
-            />
-            <BookingField
-              label="End Time"
-              type="time"
-              value={form.end_time}
-              onChange={(value) => updateField('end_time', value)}
-              required
-            />
+            <label className="block">
+              <span className="text-sm font-medium text-slate-700">Shift</span>
+              <select
+                value={form.booking_shift}
+                onChange={(event) => updateField('booking_shift', event.target.value)}
+                required
+                className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-[#1e2a45] focus:ring-2 focus:ring-[#1e2a45]/10"
+              >
+                {venueShifts.map((shift) => (
+                  <option key={shift.value} value={shift.value}>
+                    {shift.label} ({shift.time})
+                  </option>
+                ))}
+              </select>
+            </label>
             <BookingField
               label="Total Charge"
               type="number"
@@ -785,6 +802,7 @@ function BookingField({
 
 function AvailabilityBadge({ status }) {
   const available = status === 'Available'
+  const partial = status === 'Partially Booked'
 
   return (
     <span
@@ -792,12 +810,23 @@ function AvailabilityBadge({ status }) {
         'inline-flex rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset',
         available
           ? 'bg-green-50 text-green-700 ring-green-600/20'
-          : 'bg-red-50 text-red-700 ring-red-600/20',
+          : partial
+            ? 'bg-amber-50 text-amber-700 ring-amber-600/20'
+            : 'bg-red-50 text-red-700 ring-red-600/20',
       ].join(' ')}
     >
       {status}
     </span>
   )
+}
+
+function shiftStatusClass(status) {
+  const booked = ['Pending', 'Confirmed'].includes(status)
+
+  return [
+    'font-semibold',
+    booked ? 'text-red-700' : 'text-green-700',
+  ].join(' ')
 }
 
 function BookingStatusBadge({ status }) {
@@ -918,6 +947,20 @@ function formatTime(value) {
   }
 
   return String(value).slice(0, 5)
+}
+
+function formatShift(value) {
+  return venueShifts.find((shift) => shift.value === value)?.label || value || '-'
+}
+
+function formatTimeRange(booking) {
+  const shift = venueShifts.find((item) => item.value === booking.booking_shift)
+
+  if (shift) {
+    return shift.time
+  }
+
+  return `${formatTime(booking.start_time)} - ${formatTime(booking.end_time)}`
 }
 
 export default Venues
